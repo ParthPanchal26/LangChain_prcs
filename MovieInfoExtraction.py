@@ -8,16 +8,15 @@ from langchain_core.prompts import (
     SystemMessagePromptTemplate,
     HumanMessagePromptTemplate,
 )
+import streamlit as st
 
 # Load secrets
 load_dotenv()
-
 
 # Create pydantic schema
 class Cast(BaseModel):
     name: str = Field(description="Cast name")
     role: str = Field(description="Role of the cast")
-
 
 class MovieData(BaseModel):
     title: str = Field(description="Write the movie title, NA if not available")
@@ -30,7 +29,6 @@ class MovieData(BaseModel):
     language: str = Field(description="Write language of movie, NA if not available")
     country: str = Field(description="Country of origin, Na if not available")
     summary: str = Field(description="Summary of movie, NA if not available")
-
 
 # Create system prompt
 systemPrompt = ChatPromptTemplate.from_messages(
@@ -56,25 +54,24 @@ systemPrompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-# create parser
+# Create parser
 parser = PydanticOutputParser(pydantic_object=MovieData)
 
-# Get input
-paragraph = input("Movie text: ")
+# Get movie info
+st.title("Movie Data Extraction")
+paragraph = st.text_area("Enter movie description text here:")
 
-# Create final prompt
-final_system_prompt = systemPrompt.invoke(
-    {"output_format": parser.get_format_instructions(), "paragraph": paragraph}
-)
+# Extract data
+if st.button("Extract Movie Data"):
+    final_system_prompt = systemPrompt.invoke(
+        {"output_format": parser.get_format_instructions(), "paragraph": paragraph}
+    )
 
-# # create model
-model = init_chat_model(
-    model="mistralai/mistral-small-4-119b-2603",
-    model_provider="nvidia",
-    temperature=0.2,
-)
+    model = init_chat_model(
+        model="mistralai/mistral-small-4-119b-2603",
+        model_provider="nvidia",
+        temperature=0.2,
+    )
 
-# # invoke mode
-response = model.invoke(final_system_prompt)
-
-print(response.content)
+    response = model.invoke(final_system_prompt)
+    st.code(response.content, language="json")
